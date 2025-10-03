@@ -1,0 +1,219 @@
+Assume the webapp will be a bot chat mimicking Ms Teams Chat.
+
+Overview — Prototype MVP (priority)
+
+1. show user {username} — 360° read-only user view (mock data)
+2. reset password {username} — simulated password reset with approval card
+3. token help {username} — interactive token onboarding guide + status check
+4. check leave {username} — compare HR vs AD mock state and propose action
+5. app {appname} — app catalogue lookup (admin URL, owner, DB)
+6. find anomalies — list a few sample suspicious accounts
+
+Stories & Implementation Guides
+
+create 2 user chat window:
+access engineer = accessadmin
+end user = alice.w
+
+1) User Lookup — show user {username}
+
+User story:
+As an Access engineer (a mock user chat called accessadmin already in place), I want to fetch a quick 360° view of a user so I can understand status, groups, apps and next steps without toggling multiple consoles.
+
+Acceptance criteria (Given/When/Then):
+
+Given the bot service is running and the user types @AccessBot show user alice.w in Teams,
+When the backend returns mock data for alice.w,
+Then the bot displays an adaptive card with: Full name, AD status (Enabled/Disabled), groups, VPN status, list of applications (name + active/inactive), last logon, support contact(s), and links to app admin URLs.
+
+Dev tasks (high level):
+
+Create bot.
+
+Backend endpoint: GET /api/user/{username} that returns mock JSON.
+
+Adaptive Card template for user summary.
+
+Unit test: query for mocked alice.w and validate card payload.
+
+
+Mock API contract (example):
+
+GET /api/user/alice.w → 200:
+
+{
+  "username":"alice.w",
+  "fullname":"Alice Walker",
+  "adStatus":"Enabled",
+  "lastLogon":"2025-09-22T08:30:00Z",
+  "groups":["Finance","VPN-Users"],
+  "vpnAssigned": true,
+  "applications":[
+    {"name":"Payroll","status":"Active","adminUrl":"https://payroll.example/admin"},
+    {"name":"CRM","status":"Inactive","adminUrl":"https://crm.example/admin"}
+  ],
+  "supportContacts":[{"role":"Supervisor","name":"Jane Doe","email":"jane.doe@example.com"}] 
+}
+
+Demo test steps:
+
+Type @AccessBot show user alice.w.
+Verify card shows fields above and clickable admin links.
+
+2) Password Reset (simulated) — reset password {username}
+
+User story:
+As an user (a mock user chat called alice.w already in place), I want to request a password reset for myself with an approval workflow so I can demonstrate controlled writes.
+
+Acceptance criteria:
+
+Given the command @AccessBot reset password alice.w,
+
+When invoked, the bot replies with a list of options below to select from:
+a. Lakebaas Reset (GH approval required)
+b. Network AD password reset (Supervisor approval required)
+c. Eyemal reset (GH approval required)
+d. Application Name Unlock/Reset/Update/Create
+
+When the user selects anyone, it posts an approval adaptive card to accessadmin chat, including type of password reset selected.
+
+Then upon “Approve” in the accessadmin chat window, the bot returns confirmation: Password reset simulated. Audit ID #XXXX is sent to both the accessadmin and alice.w.
+
+Dev tasks example:
+
+Backend endpoint: POST /api/request/password-reset (creates a simulated request and returns requestId and payload for approval).
+
+Approval adaptive card with Approve/Reject. Card action posts back to the backend: POST /api/approval/{requestId}.
+
+On approval, backend marks request completed and returns a confirmation message with generated Audit ID.
+
+Log all events in local log (simulate SIEM ingestion).
+
+Mock API examples:
+
+POST /api/request/password-reset body:
+{"username":"alice.w","requestedBy":"alice.w","reason":"User locked out","requesttype":"Lakebaas Reset"}
+response:
+{"requestId":"req-001","status":"pending","approver":"approver1@example.com"}
+
+POST /api/approval/req-001 body:
+ {"decision":"approve","approver":"approver1@example.com"}
+response
+{"requestId":"req-001","status":"completed","auditId":"AUD-20250928-0001"}
+
+Demo test steps:
+
+Type @AccessBot reset password alice.w.
+Bot replies with options to chose the type of request
+user selects from the options displayed
+Approver receives card → clicks Approve.
+Bot posts: Password reset simulated. Audit ID #AUD-....
+
+3) Token Onboarding Help — token help {username}
+
+User story:
+As an end user/support engineer, I want an interactive step-by-step guide for token onboarding and a one-click status check so onboarding volume reduces.
+
+Acceptance criteria:
+
+Given @AccessBot token help alice.w,
+
+When invoked, the bot displays steps (1..N) with images and a “Check token status” button (the step by step guide pdf will be attached also for the user to download and read),
+
+When “Check token status” is clicked, backend returns token status: registered | not-registered | error, and shows next steps.
+
+Dev tasks example:
+
+Create static guide content (Markdown or JSON flow) for onboarding and show a link to download or view pdf.
+
+Endpoint: GET /api/token/status/{username} → returns mock status.
+
+Adaptive flow: card with steps + button; button opens a conversation card with the status result and suggested next step (e.g., “re-provision” action disabled for POC).
+
+Mock:
+
+GET /api/token/status/alice.w
+
+{"username":"alice.w","tokenStatus":"not-registered","lastChecked":"2025-09-27T12:00:00Z"}
+
+Demo test steps:
+
+Type @AccessBot token help alice.w.
+It posts the step by step onboarding process with a clickable link to view or download the pdf.
+Click “Check token status” → shows not-registered and “Next step: Follow step 2 to register”.
+
+4) App Catalogue Lookup — app {appname}
+
+User story:
+As an Access engineer, I want to look up an application quickly to get admin URL, DB type, owner and support contact so I can navigate quickly.
+
+Acceptance criteria:
+
+Given @AccessBot app Payroll,
+
+When backend returns app metadata,
+
+Then bot shows app card with Admin URL, User URL, DB Type (Oracle/Mongo/Postgres), Owner, 3rd-party/internal flag, and support contact.
+
+Dev tasks example:
+
+Backend endpoint: GET /api/app/{appname} returns mock metadata.
+
+Adaptive card that renders link + metadata.
+
+Admin-only link could be prototyped to show a note: “Opens admin console (PAM-proxied) — simulated.”
+
+Mock app data:
+
+GET /api/app/payroll:
+
+{
+  "name":"Payroll",
+  "adminUrl":"https://payroll.example/admin",
+
+  "userUrl":"https://payroll.example",
+  "description":"this app is used for bulk journal posting",
+
+  "dbType":"Oracle",
+  "owner":"Jane Doe; e-operations; branch", 
+  "thirdParty":false,
+  "supportEmail":"payroll-support@example.com"
+}
+
+Demo test steps:
+
+Type @AccessBot app Payroll.
+Bot returns the card with clickable admin URL and owner info.
+
+5) Anomaly Check — find anomalies
+
+User story:
+As an Access manager, I want a quick example of anomaly detection results so I can see how AI flags problematic accounts.
+
+Acceptance criteria:
+
+Given @AccessBot find anomalies,
+
+When backend returns a mock list of flagged users,
+
+Then bot displays top N anomalies each with short rationale and recommended action.
+
+Dev tasks example:
+
+Endpoint: GET /api/anomalies returns mock flagged users (priority score + reason).
+
+Card/list render of anomalies with “View user” link that launches show user.
+
+Mock anomalies:
+
+GET /api/anomalies:
+
+[
+  {"username":"dan.j","score":0.92,"reason":"Admin group assigned but last logon > 120 days","recommendedAction":"Disable or review"},
+  {"username":"sam.k","score":0.87,"reason":"Multiple suspicious app roles added in <7 days","recommendedAction":"Revoke roles & escalate"}
+]
+
+Demo test steps:
+
+Type @AccessBot find anomalies.
+Bot lists flagged users. Click one to call show user.
