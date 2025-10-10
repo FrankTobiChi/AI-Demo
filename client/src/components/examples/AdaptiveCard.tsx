@@ -4,14 +4,15 @@ export default function AdaptiveCardExample() {
   // Mock user data
   const userData = {
     username: "alice.w",
-    fullname: "Alice Walker", 
+    fullname: "Alice Walker",
+    email: "Alice.Walker@sterling.ng", 
     adStatus: "Enabled" as const,
     lastLogon: "2025-09-22T08:30:00Z",
-    groups: ["Finance", "VPN-Users"],
+    groups: ["Tech-Compliance", "VPN-Users", "Zoho-Users"],
     vpnAssigned: true,
     applications: [
-      { name: "Payroll", status: "Active" as const, adminUrl: "https://payroll.example/admin" },
-      { name: "CRM", status: "Inactive" as const, adminUrl: "https://crm.example/admin" }
+      { name: "SeaBaas", status: "Active" as const, adminUrl: "https://seabaas.sterling.ng" },
+      { name: "Xplorer", status: "Inactive" as const, adminUrl: "https://xplorer.sterling.ng/" }
     ],
     supportContacts: [
       { role: "Supervisor", name: "Jane Doe", email: "jane.doe@example.com" }
@@ -20,14 +21,14 @@ export default function AdaptiveCardExample() {
 
   // Mock app data
   const appData = {
-    name: "Payroll",
-    adminUrl: "https://payroll.example/admin",
-    userUrl: "https://payroll.example",
-    description: "This app is used for bulk journal posting",
-    dbType: "Oracle",
-    owner: "Jane Doe; e-operations; branch",
+    name: "SeaBaas",
+    adminUrl: "https://seabaas.sterling.ng",
+    userUrl: "https://xplorer.sterling.ng",
+    description: "This app is used for Core Banking operations.",
+    dbType: "PostgreSQL",
+    owner: "Peerless; Sterling Bank",
     thirdParty: false,
-    supportEmail: "payroll-support@example.com"
+    supportEmail: "seabaas-support@example.com"
   };
 
   // Mock anomaly data
